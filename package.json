@@ -1,0 +1,19 @@
+{
+  "name": "receipt-splitter",
+  "version": "1.0.0",
+  "description": "A website that allows users to split fairly their bills",
+  "main": "server.js",
+  "scripts": {
+    "test": "npm test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TheRealGtx/receipt-splitter.git"
+  },
+  "author": "Giuliano Manzi",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/TheRealGtx/receipt-splitter/issues"
+  },
+  "homepage": "https://github.com/TheRealGtx/receipt-splitter#readme"
+}
