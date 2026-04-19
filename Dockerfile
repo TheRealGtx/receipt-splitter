@@ -104,6 +104,6 @@ RUN apk add --no-cache --virtual .build-deps-yarn curl gnupg tar \
   && yarn --version \
   && rm -rf /tmp/*
 
-COPY src/ .
+COPY /src ./src
 EXPOSE 8000
 CMD [ "node" ]
