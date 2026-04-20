@@ -1,3 +1,9 @@
 LICENSE
 README.md
 .env
+node_modules
+.git
+.github
+notes.txt
+tests/
+.vscode
