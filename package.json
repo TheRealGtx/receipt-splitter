@@ -4,7 +4,10 @@
   "description": "A website that allows users to split fairly their bills",
   "main": "server.js",
   "scripts": {
-    "test": "npm test"
+    "start": "node server.js",
+    "test": "jest",
+    "dev": "node server.js",
+    "lint": "eslint ."
   },
   "repository": {
     "type": "git",
@@ -14,6 +17,11 @@
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/TheRealGtx/receipt-splitter/issues"
+  },
+  "devDependencies": {
+    "eslint": "^10.2.1",
+    "jest": "^30.3.0",
+    "supertest": "^7.2.2"
   },
   "homepage": "https://github.com/TheRealGtx/receipt-splitter#readme"
 }
