@@ -1,18 +1,33 @@
 services:
   web:
-    build: .
+    build:
+      context: .
+      target: production
     ports:
-      - "${APP_PORT}:8080"
+      - "${APP_PORT:-8080}:8080"
+    environment:
+      - NODE_ENV=development
+      - PORT=${APP_PORT}
+      - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@database:5432/${POSTGRES_DB}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
     depends_on:
       database:
         condition: service_healthy
     develop:
       watch:
-        - action: sync+restart
-          path: .
-          target: .
+        - action: sync
+          path: ./src
+          target: /app/src
+          ignore:
+            - node_modules/
         - action: rebuild
-          path: .
+          path: package.json
   
   database:
     image: postgres:18.3
@@ -21,7 +36,7 @@ services:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_DB=${POSTGRES_DB}
     volumes:
-      - postgres-data:/data
+      - postgres-data:/var/lib/postgresql/data
     healthcheck:
       test: [ "CMD", "pg_isready", "-q", "-d", "${POSTGRES_DB}", "-U", "${POSTGRES_USER}" ]
       interval: 5s
