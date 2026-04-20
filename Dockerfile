@@ -21,7 +21,7 @@ WORKDIR /app
 
 COPY --from=dependencies --chown=noduser:nodejs /app/node_modules ./node_modules
 COPY --chown=nodeuser:nodejs package*.json ./
-COPY --chown=nodeuser:nodejs server.js ./
+COPY --chown=nodeuser:nodejs src/ ./src/
 
 USER nodeuser
 
