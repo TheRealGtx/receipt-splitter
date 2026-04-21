@@ -2,6 +2,15 @@ const request = require('supertest')
 const server = require('../src/server')
 
 describe('App endpoints', () => {
+    beforeAll((done) => {
+        if (!server.listening) {
+            server.listen(8080, done)
+        }
+        else {
+            done()
+        }
+    });
+    
     afterAll((done) => {
         server.close(done);
     });
