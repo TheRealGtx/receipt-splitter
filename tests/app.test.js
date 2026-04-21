@@ -1,5 +1,5 @@
-import request from 'supertest'
-import server from '../src/server'
+const request = require('supertest')
+const server = require('../src/server')
 
 describe('App endpoints', () => {
     afterAll((done) => {
