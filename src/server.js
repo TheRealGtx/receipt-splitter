@@ -1,8 +1,14 @@
 let http = require('http')
 
-http.createServer(function (req, res) {
+const server = http.createServer(function (req, res) {
     res.writeHead(200, {'content-type': 'text/html'});
     res.end('Website working');
-}).listen(8080, '0.0.0.0', () => {
-    console.log('Server running on port 8080');
 });
+
+module.exports = server
+
+if (require.main == module) {
+    server.listen(8080, '0.0.0.0', () => {
+        console.log('Server listening on port 8080')
+    });
+}
