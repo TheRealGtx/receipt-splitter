@@ -1,4 +1,4 @@
-let http = require('http')
+import http from 'http'
 
 const server = http.createServer(function (req, res) {
     res.writeHead(200, {'content-type': 'text/html'});
