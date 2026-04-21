@@ -1,9 +1,9 @@
-const request = require('supertest')
-const server = require('../src/server')
+import request from 'supertest'
+import server from '../src/server'
 
 describe('App endpoints', () => {
-    afterAll(() => {
-        server.close();
+    afterAll((done) => {
+        server.close(done);
     });
 
     test('Home page', async () => {
