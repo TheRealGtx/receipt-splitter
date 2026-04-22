@@ -18,6 +18,6 @@ describe('App endpoints', () => {
     test('Home page', async () => {
         const response = await request(server).get('/')
         expect(response.status).toBe(200);
-        expect(response.text).toContain('Production version');
+        expect(response.text).toContain('Production version on AWS');
     });
 });
