@@ -2,7 +2,7 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, develop ]
     tags: [ 'v*' ]
   pull_request:
     branches: [ main ]
@@ -10,6 +10,13 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
+  AWS_REGION: ${{ vars.AWS_REGION }}
+  AWS_ACCOUNT_ID: ${{ vars.AWS_ACCOUNT_ID }}
+  ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
+  ECS_SERVICE: ${{ vars.ECS_SERVICE }}
+  ECS_CLUSTER: ${{ vars.ECS_CLUSTER }}
+  AWS_ACCESS_KEY_ID: ${{ vars.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ vars.AWS_SECRET_ACCESS_KEY }}
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -19,112 +26,80 @@ jobs:
   test:
     name: Test & Lint
     runs-on: ubuntu-latest
-
     strategy:
       matrix:
         node-version: [24]
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
-
-      - name: Setup Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v6
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
         with:
           node-version: ${{ matrix.node-version }}
           cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run linting
-        run: npm run lint
-
-      - name: Run tests
-        run: npm test
-
-      - name: Security audit
-        run: npm audit --audit-level=critical || echo "Audit completed with warnings"
+      - name: Install & Test
+        run: |
+          npm ci
+          npm run lint
+          npm test
 
   build:
     name: Build & Push Image
     runs-on: ubuntu-latest
     needs: test
     if: github.event_name == 'push'
-
     permissions:
       contents: read
       packages: write
+      id-token: write
       security-events: write
-
     outputs:
-      image-tag: ${{ steps.meta.outputs.tags }}
-      image-digest: ${{ steps.build.outputs.digest }}
-
+      image-tag: ${{ steps.set-tag.outputs.tag }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v5
 
-      - name: Lowercase Registry and Image Name
+      - name: Set Image Tag
+        id: set-tag
         run: |
-          echo "IMAGE_NAME=${GITHUB_REPOSITORY@L}" >> $GITHUB_ENV
+          TAG="${GITHUB_SHA:0:7}"
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "IMAGE_TAG=$TAG" >> $GITHUB_ENV
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: arn:aws:iam::${{ env.AWS_ACCOUNT_ID }}:role/github-actions-ecs-role
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
-        with:
-          platforms: linux/amd64,linux/arm64
+        uses: docker/setup-buildx-action@v3
 
-      - name: Log in to Container Registry
-        uses: docker/login-action@v4
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v6
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          tags: |
-            type=ref,event=branch
-            type=ref,event=pr
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=sha,prefix={{branch}}-
-            type=raw,value=${{ github.run_id }}
-            type=raw,value=latest,enable={{is_default_branch}}
-          labels: |
-            org.opencontainers.image.title=receipt-splitter
-            org.opencontainers.image.description=A website that allows users to split fairly their bills
-
-      - name: Build and push Docker image
-        id: build
-        uses: docker/build-push-action@v7
+      - name: Build and Push to ECR
+        uses: docker/build-push-action@v6
         with:
           context: .
-          platforms: linux/amd64,linux/arm64
           push: true
-          tags: |
-            ${{ steps.meta.outputs.tags }}
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
-          labels: ${{ steps.meta.outputs.labels }}
+          tags: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ steps.set-tag.outputs.tag }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          target: production
 
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@0.35.0
         env:
-          TRIVY_USERNAME: ${{ github.actor }}
-          TRIVY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+          AWS_ACCESS_KEY_ID: ${{ env.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ env.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ${{ env.AWS_REGION }}
         with:
           scan-type: 'image'
-          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          image-ref: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ steps.set-tag.outputs.tag }}
           format: 'sarif'
           output: 'trivy-results.sarif'
           severity: 'CRITICAL,HIGH'
-        continue-on-error: true
 
       - name: Upload Trivy scan results
         uses: github/codeql-action/upload-sarif@v4
@@ -138,14 +113,29 @@ jobs:
     needs: build
     if: github.ref == 'refs/heads/develop'
     environment: staging
-
+    permissions:
+      id-token: write
+      contents: read
     steps:
-      - name: Deploy to Staging
-        run: |
-          echo "Deploying to staging environment..."
-          echo "Image: ${{ needs.build.outputs.image-tag }}"
-          echo "Digest: ${{ needs.build.outputs.image-digest }}"
-          # TODO add AWS
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: arn:aws:iam::${{ env.AWS_ACCOUNT_ID }}:role/github-actions-ecs-role
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Deploy to ECS Express Mode
+        uses: aws-actions/amazon-ecs-deploy-express-service@v1
+        with:
+          service-name: ${{ env.ECS_SERVICE }}
+          image: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ needs.build.outputs.image-tag }}
+          execution-role-arn: arn:aws:iam::${{ env.AWS_ACCOUNT_ID }}:role/ecsTaskExecutionRole
+          infrastructure-role-arn: arn:aws:iam::${{ env.AWS_ACCOUNT_ID }}:role/ecsInfrastructureRoleForExpressServices
+          container-port: 8080
+          cluster: ${{ env.ECS_CLUSTER }}
 
   deploy-production:
     name: Deploy to Production
@@ -153,11 +143,26 @@ jobs:
     needs: build
     if: github.ref == 'refs/heads/main'
     environment: production
-
+    permissions:
+      id-token: write
+      contents: read
     steps:
-      - name: Deploy to Production
-        run: |
-          echo "Deploying to production environment..."
-          echo "Image: ${{ needs.build.outputs.image-tag }}"
-          echo "Digest: ${{ needs.build.outputs.image-digest }}"
-          # TODO add AWS
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: arn:aws:iam::${{ env.AWS_ACCOUNT_ID }}:role/github-actions-ecs-role
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Deploy to ECS Express Mode
+        uses: aws-actions/amazon-ecs-deploy-express-service@v1
+        with:
+          service-name: ${{ env.ECS_SERVICE }}
+          image: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ needs.build.outputs.image-tag }}
+          execution-role-arn: arn:aws:iam::${{ env.AWS_ACCOUNT_ID }}:role/ecsTaskExecutionRole
+          infrastructure-role-arn: arn:aws:iam::${{ env.AWS_ACCOUNT_ID }}:role/ecsInfrastructureRoleForExpressServices
+          container-port: 8080
+          cluster: ${{ env.ECS_CLUSTER }}
