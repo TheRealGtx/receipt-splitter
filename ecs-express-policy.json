@@ -1,0 +1,34 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "ecs:CreateCluster",
+                "ecs:RegisterTaskDefinition",
+                "ecs:CreateExpressGatewayService",
+                "ecs:UpdateExpressGatewayService",
+                "ecs:DescribeExpressGatewayService",
+                "ecs:DescribeClusters",
+                "ecs:DescribeServices",
+                "ecs:ListServiceDeployments",
+                "ecs:UpdateService",
+                "ecs:DescribeServiceDeployments"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Effect": "Allow",
+            "Action": "iam:PassRole",
+            "Resource": [
+                "arn:aws:iam::685612173107:role/ecsTaskExecutionRole",
+                "arn:aws:iam::685612173107:role/ecsInfrastructureRoleForExpressServices"
+            ],
+            "Condition": {
+                "StringEquals": {
+                    "iam:PassedToService": "ecs.amazonaws.com"
+                }
+            }
+        }
+    ]
+}
