@@ -8,17 +8,12 @@ on:
     branches: [ main ]
 
 env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
   AWS_REGION: ${{ vars.AWS_REGION }}
   AWS_ACCOUNT_ID: ${{ vars.AWS_ACCOUNT_ID }}
   ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
   ECS_SERVICE: ${{ vars.ECS_SERVICE }}
   ECS_CLUSTER: ${{ vars.ECS_CLUSTER }}
   SUBNET_IDS: ${{ vars.SUBNET_IDS }}
-  SECURITY_GROUP_ID: ${{ vars.SECURITY_GROUP_ID }}
-
-
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -134,8 +129,7 @@ jobs:
           infrastructure-role-arn: arn:aws:iam::${{ env.AWS_ACCOUNT_ID }}:role/ecsInfrastructureRoleForExpressServices
           container-port: 8080
           cluster: ${{ env.ECS_CLUSTER }}
-          subnet-ids: ${{ env.SUBNET_IDS }}
-          security-group-ids: ${{ env.SECURITY_GROUP_ID }}
+          subnets: ${{ env.SUBNET_IDS }}
 
   deploy-production:
     name: Deploy to Production
@@ -166,6 +160,4 @@ jobs:
           infrastructure-role-arn: arn:aws:iam::${{ env.AWS_ACCOUNT_ID }}:role/ecsInfrastructureRoleForExpressServices
           container-port: 8080
           cluster: ${{ env.ECS_CLUSTER }}
-          subnet-ids: ${{ env.SUBNET_IDS }}
-          security-group-ids: ${{ env.SECURITY_GROUP_ID }}
-          
+          subnets: ${{ env.SUBNET_IDS }}
