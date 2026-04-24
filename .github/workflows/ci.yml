@@ -130,6 +130,7 @@ jobs:
           container-port: 8080
           cluster: ${{ env.ECS_CLUSTER }}
           subnets: ${{ env.SUBNET_IDS }}
+          assign-public-ip: ENABLED
 
   deploy-production:
     name: Deploy to Production
@@ -161,3 +162,4 @@ jobs:
           container-port: 8080
           cluster: ${{ env.ECS_CLUSTER }}
           subnets: ${{ env.SUBNET_IDS }}
+          assign-public-ip: ENABLED
