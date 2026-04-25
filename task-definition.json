@@ -1,0 +1,42 @@
+{
+  "family": "receipt-splitter-cluster-receipt-splitter-service8",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "1024",
+  "memory": "2048",
+  "executionRoleArn": "arn:aws:iam::685612173107:role/ecsTaskExecutionRole",
+  "containerDefinitions": [
+    {
+      "name": "Main",
+      "image": "685612173107.dkr.ecr.eu-central-1.amazonaws.com/receipt-splitter:latest",
+      "essential": true,
+      "cpu": 1024,
+      "memoryReservation": 2048,
+      "portMappings": [
+        {
+          "containerPort": 8080,
+          "hostPort": 8080,
+          "protocol": "tcp"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/aws/ecs/receipt-splitter-cluster/receipt-splitter-service8-65d7",
+          "awslogs-region": "eu-central-1",
+          "awslogs-stream-prefix": "ecs"
+        }
+      },
+      "healthCheck": {
+        "command": [
+          "CMD-SHELL",
+          "curl -f http://localhost:8080/health || exit 1"
+        ],
+        "interval": 30,
+        "timeout": 5,
+        "retries": 3,
+        "startPeriod": 60
+      }
+    }
+  ]
+}
