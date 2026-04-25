@@ -1,5 +1,5 @@
 {
-  "family": "receipt-splitter-cluster-receipt-splitter-service8",
+  "family": "receipt-splitter",
   "networkMode": "awsvpc",
   "requiresCompatibilities": ["FARGATE"],
   "cpu": "1024",
@@ -7,7 +7,7 @@
   "executionRoleArn": "arn:aws:iam::685612173107:role/ecsTaskExecutionRole",
   "containerDefinitions": [
     {
-      "name": "Main",
+      "name": "receipt-splitter",
       "image": "685612173107.dkr.ecr.eu-central-1.amazonaws.com/receipt-splitter:latest",
       "essential": true,
       "cpu": 1024,
@@ -22,7 +22,7 @@
       "logConfiguration": {
         "logDriver": "awslogs",
         "options": {
-          "awslogs-group": "/aws/ecs/receipt-splitter-cluster/receipt-splitter-service8-65d7",
+          "awslogs-group": "/ecs/receipt-splitter",
           "awslogs-region": "eu-central-1",
           "awslogs-stream-prefix": "ecs"
         }
