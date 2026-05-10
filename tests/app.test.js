@@ -1,23 +1,19 @@
-const request = require('supertest')
-const server = require('../src/server')
+const http = require('http');
+const request = require('supertest');
+const app = require('../src/server');
 
-describe('App endpoints', () => {
-    beforeAll((done) => {
-        if (!server.listening) {
-            server.listen(8080, done)
-        }
-        else {
-            done()
-        }
-    });
-    
-    afterAll((done) => {
-        server.close(done);
-    });
+let server;
 
-    test('Home page', async () => {
-        const response = await request(server).get('/')
-        expect(response.status).toBe(200);
-        expect(response.text).toContain('Production version on AWS');
-    });
+beforeAll((done) => {
+    server = http.createServer(app);
+    server.listen(8080, done);
+});
+
+afterAll((done) => {
+    server.close(done);
+});
+
+test('health', async () => {
+    const response = await request(server).get('/health')
+    expect(response.status).toBe(200);
 });

@@ -1,14 +1,14 @@
-let http = require('http')
+const express = require('express');
+const healthRoute = require('./routes/health');
 
-const server = http.createServer(function (req, res) {
-    res.writeHead(200, {'content-type': 'text/html'});
-    res.end('Production version on AWS');
-});
+const app = express();
+app.use(express.json());
+app.use(healthRoute);
 
-module.exports = server
+const PORT = process.env.PORT || 8080;
 
-if (require.main == module) {
-    server.listen(8080, '0.0.0.0', () => {
-        console.log('Server listening on port 8080')
-    });
+if (require.main === module) {
+  app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 }
+
+module.exports = app;
